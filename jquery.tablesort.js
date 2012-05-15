@@ -9,20 +9,21 @@ $(function() {
 	var $ = window.jQuery;
 
 	function sortValueForCell(th, td, sorter) {
-		if(th.data().sortBy) {
+		if(th.data() && th.data().sortBy) {
 			var sortBy = th.data().sortBy;
 			return (typeof sortBy === 'function') ? sortBy(th, td, sorter) : sortBy;
 		}
-		if(td.data().sortValue) {
+		if(td.data() && td.data().sortValue) {
 			return td.data().sortValue;
 		} else {
 			return td.text();
 		}
 	}
 
-	$.tablesort = function ($table, settings) {
+	$.tablesort = function ($table, $tableId, settings) {
 		var self = this;
 		this.$table = $table;
+		this.$id = $tableId;
 		this.settings = $.extend({}, $.tablesort.defaults, settings);
 		this.$table.find('thead th').bind('click.tablesort', function() {
 			self.sort($(this));
@@ -30,6 +31,12 @@ $(function() {
 		this.index = null;
 		this.$th = null;
 		this.direction = null;
+
+		var initSort = sessionStorage.getItem('initSort' + $tableId);
+		if (initSort) {
+			var is = JSON.parse(initSort);
+			self.sort($('thead th:nth-child(' + (++is.index) + ')'), is.direction);
+		}
 	};
 
 	$.tablesort.prototype = {
@@ -99,6 +106,10 @@ $(function() {
 			});
 
 			th.addClass(self.settings[self.direction]);
+			sessionStorage.setItem('initSort' + this.$id, JSON.stringify({ 
+				index: this.index,
+				direction: this.direction
+			}));
 
 			self.log('Sort finished in ' + ((new Date()).getTime() - start.getTime()) + 'ms');
 			self.$table.trigger('tablesort:complete', [self]);
@@ -134,13 +145,13 @@ $(function() {
 
 	$.fn.tablesort = function(settings) {
 		var table, sortable, previous;
-		return this.each(function() {
+		return this.each(function(i) {
 			table = $(this);
 			previous = table.data('tablesort');
 			if(previous) {
 				previous.destroy();
 			}
-			table.data('tablesort', new $.tablesort(table, settings));
+			table.data('tablesort', new $.tablesort(table, ++i, settings));
 		});
 	};
 
